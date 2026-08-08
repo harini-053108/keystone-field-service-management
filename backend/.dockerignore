@@ -1,0 +1,5 @@
+.dockerignore
+target/
+*.class
+*.jar
+.mvn/

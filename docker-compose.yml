@@ -1,0 +1,49 @@
+# KEYSTONE — local stack: Postgres + backend + frontend
+name: keystone
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: keystone-db
+    environment:
+      POSTGRES_DB: keystone
+      POSTGRES_USER: keystone
+      POSTGRES_PASSWORD: keystone
+    ports:
+      - "5432:5432"
+    volumes:
+      - keystone_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U keystone -d keystone"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: ./backend
+    container_name: keystone-backend
+    environment:
+      DB_URL: jdbc:postgresql://db:5432/keystone
+      DB_USERNAME: keystone
+      DB_PASSWORD: keystone
+      JWT_SECRET: ${JWT_SECRET:-keystone-dev-secret-key-change-me-in-production-0123456789abcdef}
+      JWT_EXPIRATION_MS: "86400000"
+    ports:
+      - "8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+    # Flyway runs on startup and applies migrations + seed automatically.
+
+  frontend:
+    build:
+      context: ./frontend
+    container_name: keystone-frontend
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
+
+volumes:
+  keystone_pgdata:
